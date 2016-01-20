@@ -1,0 +1,124 @@
+<html>
+
+<head>
+<title>QBERT-JURASSIC</title>
+<meta http-equiv="content-type" content="text/html; charset=ISO-8859-1">
+
+<script type="text/javascript" src="js/gl-matrix.js"></script>
+<script type="text/javascript" src="js/jquery-1.11.3.min.js"></script>
+<script type="text/javascript" src="js/webgl-utils.js"></script>
+<script type="text/javascript" src="js/parser.js"></script>
+<script type="text/javascript" src="js/main.js"></script>
+
+<script id="shader-fs" type="x-shader/x-fragment">
+    precision mediump float;
+
+    varying vec4 textures;
+    varying vec4 colors;
+
+  //  varying float textureIndex;
+    //uniform sampler2D samplers[10];
+    uniform sampler2D sampler0;
+    varying float bbv;
+    varying vec4 cubecolor;
+  //  uniform sampler2D sampler1;
+    vec4 col;
+
+    void main(void) {
+         if(bbv==1.0){
+           gl_FragColor = cubecolor;
+      //     gl_FragColor = vec4(1.0,0.0,0.0,1.0);
+         }
+        //  else if(bbv == 2.0)
+        //  {
+        //   //  vec4 texColor;
+        //   //  texColor = (texture2D(sampler0, vec2(textures.s, textures.t)));
+        //    gl_FragColor = vec4(1.0,1.0,1.0,1.0);
+        //  }
+         else{
+         vec4 texColor;
+         texColor = (texture2D(sampler0, vec2(textures.s, textures.t)));
+         gl_FragColor = colors*texColor;
+      //    gl_FragColor = vec4(0.0,1.0,0.0,1.0);
+       }
+    //     gl_FragColor = colors;
+    }
+</script>
+
+<script id="shader-vs" type="x-shader/x-vertex">
+
+    attribute vec3 vertexCoords;
+    attribute vec4 textureCoords;
+    attribute vec3 vertexNormals;
+    attribute vec3 vertexColors;
+    attribute vec3 scoreCoords;
+    attribute vec3 scoreTexCoords;
+
+
+    uniform mat4 modelViewMatrix;
+    uniform mat4 projectionMatrix;
+    uniform mat3 transformMatrix;
+    uniform vec3 kd;
+    uniform vec3 ks;
+    uniform vec3 ka;
+    uniform float n;
+    uniform float bb;
+    varying float bbv;
+
+    uniform float lt[60]; // 12 attributes per light
+    vec3 eye = vec3(0,0,2);
+    vec3 light = vec3(0,5,8);
+
+     varying vec4 textures;
+     varying vec4 cubecolor;
+    // varying float textureIndex;
+    varying vec4 colors;
+
+    void main(void) {
+
+       gl_Position = projectionMatrix * modelViewMatrix * vec4(vertexCoords, 1.0);
+       vec3 newVertexNormals = transformMatrix * vertexNormals;
+       vec3 l = vec3(1,1,1);
+       vec3 norm = normalize(newVertexNormals);
+       vec3 eyevec = eye - gl_Position.xyz;
+       eyevec = normalize(eyevec);
+       vec3 amb,diff,spec;
+       for(int i=0;i<60;i+=12)
+       {
+       vec3 light = vec3(lt[i],lt[i+1],lt[i+2]);
+       vec3 la = vec3(lt[i+3],lt[i+4],lt[i+5]);
+       vec3 ld = vec3(lt[i+6],lt[i+7],lt[i+8]);
+       vec3 ls = vec3(lt[i+9],lt[i+10],lt[i+11]);
+       vec3 lightvec = light - gl_Position.xyz;
+       lightvec = normalize(lightvec);
+       vec3 h = lightvec + eyevec;
+       h = normalize(h);
+       float ldotn = max(dot(lightvec,norm),0.0);
+       float ndoth = max(dot(norm,h),0.0);
+       ndoth = pow(ndoth,n);
+       amb  += (ka * la) ;
+       diff += (kd * ld *ldotn);
+       spec += (ks*ls*ndoth);
+       }
+
+       vec3 col = amb + diff + spec;
+       textures = textureCoords;
+       colors = vec4(col,1.0);
+       bbv =bb;
+       // ccolor = vertexColors;
+       cubecolor = vec4(vertexNormals,1.0);
+
+     }
+</script>
+</head>
+
+
+<body>
+    <img id="lives" width="10" height="10" src="assets/raptor_icon.png" >
+    <img id="gameover" width="10" height="10" src="assets/gameover.jpg">
+    <canvas id="canvas2d" width="600" height="120"  style="position: absolute; background:black; height: z-index: 0;"></canvas>
+    <canvas id="canvas" style="position: absolute; z-index: -1; "></canvas>
+    <div id="test"></div>
+</body>
+
+</html>
